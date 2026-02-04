@@ -1,103 +1,131 @@
+
+
+```markdown
 # 🚀 Real-Time Crypto Data Pipeline
 
-![Python](https://img.shields.io/badge/Python-3.10-blue)
-![Spark](https://img.shields.io/badge/Apache%20Spark-Streaming-orange)
-![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.5-black)
-![Docker](https://img.shields.io/badge/Docker-Compose-blue)
+![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
+![Apache Spark](https://img.shields.io/badge/Apache%20Spark-Streaming-E25A1C?logo=apachespark&logoColor=white)
+![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-3.5-231F20?logo=apachekafka&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?logo=streamlit&logoColor=white)
 
 ## 📖 Overview
-This project is an end-to-end data engineering pipeline that ingests, processes, and visualizes cryptocurrency trade data in real-time. It connects to the **Binance WebSocket API** to fetch live BTC/USDT trades, buffers them in **Apache Kafka**, processes them using **Spark Structured Streaming**, and stores the results in **PostgreSQL**.
+This project is an end-to-end data engineering pipeline that processes cryptocurrency trade data in real-time. It ingests live Bitcoin trades from the **Binance WebSocket API**, buffers them in **Apache Kafka**, processes them using **Spark Structured Streaming**, and visualizes market trends on a low-latency **Streamlit Dashboard**.
 
-The final output is a low-latency **Streamlit Dashboard** that visualizes price trends using 5-second sliding windows and OHLC (Open-High-Low-Close) aggregation.
+The pipeline is designed to handle high-velocity data, enforcing schema validation, timezone consistency (UTC), and robust data persistence.
 
 ## 🏗️ Architecture
-The pipeline is fully containerized and runs on a Docker network.
+The entire infrastructure is containerized using Docker to ensure reproducibility.
+
 ```mermaid
 graph LR
     A[Binance WebSocket API] -->|Raw JSON Ticks| B(Python Producer)
     B -->|Ingest| C{Apache Kafka}
     C -->|Stream Read| D[Spark Structured Streaming]
-    D -->|Window Aggregation 5s| E[(PostgreSQL DB)]
+    D -->|Micro-batch ETL| E[(PostgreSQL DB)]
     E -->|Query| F[Streamlit Dashboard]
-    F -->|Visualize| G[Interactive Candlestick Chart]
+    F -->|Dynamic Aggregation| G[Interactive Candlestick Chart]
+
 ```
-🛠️ Tech Stack
-Source: Binance WebSocket API (Asyncio)
 
-Ingestion: Apache Kafka & Zookeeper (running on Docker)
+## 🛠️ Tech Stack
 
-Processing: PySpark (Structured Streaming) with Window Functions
+* **Source:** Binance WebSocket API (Asyncio)
+* **Ingestion:** Apache Kafka & Zookeeper (running on Docker)
+* **Processing:** PySpark (Structured Streaming)
+* **Storage:** PostgreSQL (JDBC Sink)
+* **Visualization:** Streamlit, Plotly (Candlestick Charts), Streamlit Autorefresh
+* **Infrastructure:** Docker Compose, WSL2 (Ubuntu Linux)
 
-Storage: PostgreSQL (JDBC Sink)
+## ✨ Key Features
 
-Visualization: Streamlit, Plotly (Candlestick Charts), Streamlit Autorefresh
+* **Real-Time Ingestion:** Python producer pushes live ticks to Kafka with sub-second latency.
+* **Micro-batch Processing:** Spark Structured Streaming handles schema enforcement and writes micro-batches to PostgreSQL.
+* **Dynamic Windowing:** Dashboard performs on-the-fly aggregation (e.g., 5s, 10s, 30s buckets) allowing users to explore different timeframes instantly.
+* **Interactive Visualization:** Uses Plotly for zoomable, interactive financial charts with `uirevision` to maintain state during live updates.
+* **Robust Timezone Handling:** Enforced UTC across JVM, Docker Containers, and Python scripts to prevent timestamp mismatches.
 
-Infrastructure: Docker Compose, WSL2 (Ubuntu Linux)
+## 🚀 How to Run
 
-✨ Key Features
-Real-Time OHLCV Aggregation: Spark transforms raw tick data into 5-second Open-High-Low-Close-Volume candles.
+### 1. Prerequisites
 
-Smart Visualization: Streamlit dashboard uses uirevision to maintain zoom state while data updates live (no jitter).
+* Docker & Docker Compose
+* Python 3.8+
+* Java 17 (Required for Spark 3.5.0)
 
-Robust Timezone Handling: Enforced UTC across JVM, Docker Containers, and Python scripts to prevent timestamp mismatches.
+### 2. Start Infrastructure
 
-Fault Tolerance: Spark handles late data arrivals and micro-batch failures automatically.
-
-Dynamic Windowing: Dashboard allows users to adjust lookback periods (e.g., 10 min, 1 hour) and bucket sizes dynamically.
-
-🚀 How to Run
-1. Prerequisites
-Docker & Docker Compose
-
-Python 3.8+
-
-Java 17 (Required for Spark 3.5.0)
-
-2. Start Infrastructure
 Spin up the Kafka, Zookeeper, and PostgreSQL containers:
-Bash
+
+```bash
 docker-compose up -d
-3. Install Dependencies
+
+```
+
+### 3. Install Dependencies
+
 Set up a virtual environment and install the required Python libraries:
 
-Bash
+```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-4. Run the Pipeline
+
+```
+
+### 4. Run the Pipeline
+
 Open 3 separate terminals to launch the components:
 
-Terminal 1: Start Producer (Ingestion) This script connects to Binance and pushes trades to Kafka.
+**Terminal 1: Start Producer (Ingestion)**
+This script connects to Binance and pushes trades to Kafka.
 
-Bash
+```bash
 python producer.py
-Terminal 2: Start Processor (ETL) This script reads from Kafka, aggregates data, and writes to Postgres.
 
-Bash
+```
+
+**Terminal 2: Start Processor (ETL)**
+This script reads from Kafka, validates data, and writes to Postgres.
+
+```bash
 python processor.py
-Terminal 3: Launch Dashboard This script visualizes the data in your browser.
 
-Bash
+```
+
+**Terminal 3: Launch Dashboard**
+This script visualizes the data in your browser.
+
+```bash
 streamlit run dashboard.py --server.address 0.0.0.0
-📂 Project Structure
-Plaintext
+
+```
+
+## 📂 Project Structure
+
+```text
 ├── dashboard.py       # Streamlit visualization & Plotly charts
 ├── docker-compose.yml # Infrastructure definition (Kafka, Zookeeper, Postgres)
 ├── producer.py        # Connects to Binance -> Writes to Kafka
 ├── processor.py       # Spark Streaming logic (Kafka -> Postgres)
 ├── requirements.txt   # Python dependencies
 └── README.md          # Project documentation
-🔧 Engineering Challenges Solved
-Docker Networking: Configured internal service discovery so Spark (running locally) could communicate with Kafka brokers (running in Docker) using port mapping and advertised listeners.
 
-Zombie Containers: Solved "broker ID mismatch" issues by ensuring clean container shutdowns and volume management.
+```
 
-Spark-Kafka Integration: Managed specific JAR dependencies (spark-sql-kafka-0-10) to ensure compatibility between Spark 3.5 and Kafka.
+## 🔧 Engineering Challenges Solved
 
-🔮 Future Improvements
-Deployment: Deploy the pipeline to AWS (EC2 for Kafka, EMR for Spark).
+1. **Docker Networking:** Configured internal service discovery so Spark (running locally) could communicate with Kafka brokers (running in Docker) using port mapping and advertised listeners.
+2. **Zombie Containers:** Solved "broker ID mismatch" issues by ensuring clean container shutdowns and volume management.
+3. **Spark-Kafka Integration:** Managed specific JAR dependencies (`spark-sql-kafka-0-10`) to ensure compatibility between Spark 3.5 and Kafka.
 
-Alerting: Add a separate microservice to send Telegram/Discord alerts when price crosses a threshold.
+## 🔮 Future Improvements
 
-Machine Learning: Integrate a forecasting model to predict the next 5-second closing price.
+* **Deployment:** Deploy the pipeline to AWS (EC2 for Kafka, EMR for Spark).
+* **Alerting:** Add a separate microservice to send Telegram/Discord alerts when price crosses a threshold.
+* **Machine Learning:** Integrate a forecasting model to predict the next 5-second closing price.
 
+```
+
+```
